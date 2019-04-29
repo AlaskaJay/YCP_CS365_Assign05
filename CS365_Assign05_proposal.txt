@@ -1,0 +1,8 @@
+CS365_Assign05_Purposal
+
+Group members: Marie Kiley, A. Georgiou 
+
+Project title: Genetic Algorithm to Generate Images of Characters
+
+Goal:
+Use a genetic algorithm to train a program to find parameters best fit for creating images of a letter. Parallelization of this process will be benefitial due to the rigious computations involved in the genetic algorithm between the generation and fitness function computation. This project will be implimented using pthreads in the C programming language. Images will be stored in bitmaps. The letters trained on will be from the Greek alphabet. 
