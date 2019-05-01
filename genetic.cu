@@ -31,6 +31,13 @@ unsigned long utime(void)
 	return result;
 }
 
+generator genCreate()
+{
+	// TODO: Create generator	
+	
+}
+
+
 __device__ void generation()
 {
 	// TODO: generator new letter
