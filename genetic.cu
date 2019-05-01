@@ -12,6 +12,7 @@
 #define TICKS 10
 #define HEIGHT 8
 #define WIDTH 8
+#define NUM_GENERATORS 1000
 
 struct Generator {
 	float* seed;  // HEIGHT by WIDTH // [0, 1) representing percent chance of the space being black
@@ -66,8 +67,13 @@ void tick()
 
 int main(int argc, char **argv)
 {
-	// TODO: init generator* gen_data for the initial random seed
-	// TODO: init gen_data_dev
+	// init generator* gen_data for the initial random seed
+	Generator* gen_data = (Generator*)malloc(sizeof(Generator) * NUM_GENERATORS);
+	for(i = 0; i < NUM_GENERATORS; i++) {
+		// init_generator(gen_data, i);
+	}
+	
+	// TODO: init gen_data_dev	
 	
 	for(int i = 0; i < TICKS; i++) {
 		// TODO: run tick
