@@ -13,7 +13,7 @@
 #define HEIGHT 8
 #define WIDTH 8
 
-struct generator {
+struct Generator {
 	float* seed;  // HEIGHT by WIDTH // [0, 1) representing percent chance of the space being black
 	bool* values; // HEIGHT by WIDTH // bool where true is black, false is white
 	int fitness;  // int?
@@ -31,7 +31,7 @@ unsigned long utime(void)
 	return result;
 }
 
-generator genCreate()
+Generator Gen_Create()
 {
 	// TODO: Create generator	
 	
