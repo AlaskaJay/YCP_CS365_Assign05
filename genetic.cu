@@ -18,7 +18,7 @@ struct Generator {
 	float* seed;  // HEIGHT by WIDTH // [0, 1) representing percent chance of the space being black
 	bool* values; // HEIGHT by WIDTH // bool where true is black, false is white
 	int fitness;  // int?
-}
+};
 
 unsigned long utime(void) 
 {
@@ -32,12 +32,18 @@ unsigned long utime(void)
 	return result;
 }
 
+float randPercent() 
+{
+	return ((rand() % 101)/(100.0));
+}
+
+/*
 Generator Gen_Create()
 {
 	// TODO: Create generator	
 	
 }
-
+*/
 
 __device__ void generation()
 {
@@ -58,28 +64,69 @@ __global__ void kernel()
 	// TODO: run fitness for the new values
 }
 
-void tick()
+void sort(Generator* gen_data)
 {
-	// TODO: copy gen_data to gen_data_dev
+	// IDK use ... uh... quicksort? 
+	// ...
+	// BOGOSORT
+}
+
+void snap(Generator* gen_data)
+{
+	// sort generators by fitness
+	sort(gen_data);
+	
+	// TODO: kill 50% of them // SNAP
+}
+
+void tick(Generator* gen_data, Generator* gen_data_dev)
+{
+	// copy gen_data to gen_data_dev
+	cudaMemcpy( gen_data, gen_data_dev, sizeof(Generator) * NUM_GENERATORS, cudaMemcpyHostToDevice );
+	
 	// TODO: call kernal fuction
-	// TODO: copy gen_data_dev to gen_data
+	
+	
+	// copy gen_data_dev to gen_data
+	cudaMemcpy( gen_data_dev, gen_data, sizeof(Generator) * NUM_GENERATORS, cudaMemcpyDeviceToHost );
+	
+	// SNAP
+	snap(gen_data);
+	
+	// TODO: use the remaining 50% of generators to "breed the next generation"
+	// make a new gen_data
+	// populate new_gen_data
+	// exchange new_gen_data <=> gen_data
+	// free(new_gen_data)
+}
+
+void init_generator(Generator* gen_data, int index)
+{
+	for(int i = 0; i < HEIGHT; i++) {
+		for(int j = 0; j < WIDTH; j++) {
+			gen_data[index].seed[i + j * WIDTH] = randPercent();
+			gen_data[index].values[i + j * WIDTH] = false;
+		}
+	}
+	gen_data[index].fitness = 0;
 }
 
 int main(int argc, char **argv)
 {
 	// init generator* gen_data for the initial random seed
 	Generator* gen_data = (Generator*)malloc(sizeof(Generator) * NUM_GENERATORS);
-	for(i = 0; i < NUM_GENERATORS; i++) {
-		// init_generator(gen_data, i);
+	srand(time(NULL));
+	for(int i = 0; i < NUM_GENERATORS; i++) {
+		init_generator(gen_data, i);
 	}
 	
-	// TODO: init gen_data_dev	
+	// init gen_data_dev	
+	Generator* gen_data_dev;
+	cudaMalloc(&gen_data_dev, sizeof(Generator) * NUM_GENERATORS);
 	
 	for(int i = 0; i < TICKS; i++) {
-		// TODO: run tick
-		// TODO: sort generators by fitness
-		// TODO: kill 50% of them // SNAP
-		// TODO: use the remaining 50% of generators to "breed the next generation"
+		// run tick
+		tick(gen_data, gen_data_dev);
 	}
 	
 	// TODO: print out the best one so far
