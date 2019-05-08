@@ -7,6 +7,7 @@
 #include <math.h>
 #include <sys/time.h>
 #include <stdbool.h>
+#include <curand_kernel.h>
 
 #define NUM_THREADS 128
 #define TICKS 10
@@ -16,39 +17,19 @@
 
 struct Generator {
 	float* seed;  // HEIGHT by WIDTH // [0, 1) representing percent chance of the space being black
+	float* rand;  // HEIGHT by WIDTH // [0, 1) representing percent chance used to see if a space is black
 	bool* values; // HEIGHT by WIDTH // bool where true is black, false is white
 	int fitness;  // int?
 };
 
-unsigned long utime(void) 
+__device__ void generation(Generator* gen_data, int idx)
 {
-	struct timeval tv;
-	unsigned long result = 0;
-	
-	gettimeofday(&tv, NULL);
-	result += (tv.tv_sec * 1000000);
-	result += tv.tv_usec;
-	
-	return result;
-}
-
-float randPercent() 
-{
-	return ((rand() % 101)/(100.0));
-}
-
-/*
-Generator Gen_Create()
-{
-	// TODO: Create generator	
-	
-}
-*/
-
-__device__ void generation()
-{
-	// TODO: generator new letter
 	// for loop, decides whether or not a space is black
+	for(int i = 0; i < HEIGHT; i++) {
+		for(int j = 0; i < WIDTH; j++) { 
+			gen_data[idx].values[i + j * WIDTH] = (gen_data[idx].rand[i + j * WIDTH] < gen_data[idx].seed[i + j * WIDTH]);
+		}
+	}
 }
 
 __device__ void fitness() 
@@ -64,7 +45,24 @@ __global__ void kernel()
 	// TODO: run fitness for the new values
 }
 
-void sort(Generator* gen_data)
+unsigned long utime(void) 
+{
+	struct timeval tv;
+	unsigned long result = 0;
+	
+	gettimeofday(&tv, NULL);
+	result += (tv.tv_sec * 1000000);
+	result += tv.tv_usec;
+	
+	return result;
+}
+
+float randPercent() 
+{
+	return ((rand() % 1000)/(1000.0));
+}
+
+void sort(Generator* gen_data, int p, int q)
 {
 	// IDK use ... uh... quicksort? 
 	// ...
@@ -74,13 +72,28 @@ void sort(Generator* gen_data)
 void snap(Generator* gen_data)
 {
 	// sort generators by fitness
-	sort(gen_data);
+	sort(gen_data, 0, NUM_GENERATORS);
 	
 	// TODO: kill 50% of them // SNAP
 }
 
+void genRandomNumbers(Generator* gen_data, int idx) 
+{
+	// for loop, gen the numbers
+	for(int i = 0; i < HEIGHT; i++) {
+		for(int j = 0; i < WIDTH; j++) { 
+			gen_data[idx].rand[i + j * WIDTH] = randPercent();
+		}
+	}
+}
+
 void tick(Generator* gen_data, Generator* gen_data_dev)
 {
+	// generate new random numbers
+	for(int i = 0; i < NUM_GENERATORS; i++) {
+		genRandomNumbers(gen_data, i);
+	}
+
 	// copy gen_data to gen_data_dev
 	cudaMemcpy( gen_data, gen_data_dev, sizeof(Generator) * NUM_GENERATORS, cudaMemcpyHostToDevice );
 	
