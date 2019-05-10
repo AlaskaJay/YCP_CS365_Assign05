@@ -228,6 +228,9 @@ int main(int argc, char **argv)
 		gen_compare[i] = hold[i] == '1';
 	}
 	bool* gen_comp_dev;
+
+
+	
 	cudaMalloc( &gen_comp_dev, sizeof(bool) * WIDTH*HEIGHT );
 	cudaMemcpy( gen_comp_dev, gen_compare, sizeof(bool) * WIDTH*HEIGHT, cudaMemcpyHostToDevice );
 
@@ -252,6 +255,11 @@ int main(int argc, char **argv)
 	Generator* gen_data_dev;
 	cudaMalloc(&gen_data_dev, sizeof(Generator) * NUM_GENERATORS);
 	
+	
+	cudaMalloc (&gen_data->seed, sizeof(float) * (WIDTH * HEIGHT));
+	cudaMalloc (&gen_data->values, sizeof(bool) * (WIDTH * HEIGHT));
+	cudaMalloc (&gen_data->rand, sizeof(float) * (WIDTH * HEIGHT));
+	cudaMalloc (&gen_data->fitness, sizeof(float) * (WIDTH * HEIGHT));
 	
 	
 	for(int i = 0; i < TICKS; i++) {
