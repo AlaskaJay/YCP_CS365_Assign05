@@ -132,6 +132,20 @@ void genRandomNumbers(Generator* gen_data, int idx)
 	}
 }
 
+Generator mutate (Generator * gen_data, idx)
+{
+	Generator child;
+	for (int i = 0; i < HEIGHT; i++){
+	
+		for (int j = 0; j < WIDTH; j++){
+		
+			child.seed = gen_data[idx].seed;
+			child.values = gen_data[idx].values[i + j * WIDTH; 
+			seed + 0.5 - randPercent() / 50; //some arbitraty value for now 
+		}
+	}
+}
+
 void tick(Generator* gen_data, Generator* gen_data_dev)
 {
 	// generate new random numbers
@@ -146,7 +160,7 @@ void tick(Generator* gen_data, Generator* gen_data_dev)
 	
 	dim3 grid ((NUM_GENERATIONS + NUM_THREADS - 1) / NUM_THREADS)
 	
-	kernel<<<grid, NUM_THREADS>>(gen_data_dev);
+	kernel<<<grid, NUM_THREADS>>>(gen_data_dev);
 	
 	// copy gen_data_dev to gen_data
 	cudaMemcpy( gen_data_dev, gen_data, sizeof(Generator) * NUM_GENERATORS, cudaMemcpyDeviceToHost );
