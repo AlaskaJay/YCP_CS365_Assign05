@@ -261,11 +261,22 @@ int main(int argc, char **argv)
 	
 	// TODO: print out the best one so far
 	
-	for (int i = 0; i < HEIGHT; i++){
+	/*for (int i = 0; i < HEIGHT; i++){
 		for (int j = 0; j < WIDTH; j++){
 			printf ("%c", gen_data[0].values[i + j * WIDTH] ? '1' : '0');
 		}
-	}
+	}*/
+	// print
+	for(int i = 0; i < HEIGHT; i++) {
+		for(int j = 0; j < WIDTH; j++) {
+			if(gen_data->image[i * WIDTH  + j]) {
+				printf("1.");
+			} else {
+				printf("0.");
+			}
+		}
+		printf("\n");
+}
 
 	return 0;
 }
