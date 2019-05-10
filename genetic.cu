@@ -269,7 +269,7 @@ int main(int argc, char **argv)
 	// print
 	for(int i = 0; i < HEIGHT; i++) {
 		for(int j = 0; j < WIDTH; j++) {
-			if(gen_data->image[i * WIDTH  + j]) {
+			if(gen_data->values[i * WIDTH  + j]) {
 				printf("1.");
 			} else {
 				printf("0.");
