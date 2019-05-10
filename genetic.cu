@@ -69,7 +69,7 @@ __global__ void kernel(Generator * gen_data, bool* gen_comp_dev)
 	
 	generation (gen_data, idx);	
 	
-	fitness(gen_data, idx, bool* gen_comp_dev);
+	fitness(gen_data, idx, gen_comp_dev);
 	
 		
 }
@@ -132,13 +132,13 @@ void genRandomNumbers(Generator* gen_data, int idx)
 	}
 }
 
-Generator mutate(Generator * gen_data, idx)
+Generator mutate(Generator * gen_data, int idx)
 {
 	Generator child;
 	for (int i = 0; i < HEIGHT; i++){
 		for (int j = 0; j < WIDTH; j++){
 			child.seed[i + j * WIDTH] = gen_data[idx].seed[i + j * WIDTH] + (0.5 - randPercent()) / 50;;
-			child.values[i + j * WIDTH] = gen_data[idx].values[i + j * WIDTH; 
+			child.values[i + j * WIDTH] = gen_data[idx].values[i + j * WIDTH]; 
 		}
 	}
 	return child;
@@ -158,7 +158,7 @@ void tick(Generator* gen_data, Generator* gen_data_dev, bool* gen_comp_dev)
 	
 	dim3 grid ((NUM_GENERATORS + NUM_THREADS - 1) / NUM_THREADS);
 	
-	kernel<<<grid, NUM_THREADS>>>(gen_data_dev);
+	kernel<<<grid, NUM_THREADS>>>(gen_data_dev, gen_comp_dev);
 	
 	// copy gen_data_dev to gen_data
 	cudaMemcpy( gen_data, gen_data_dev, sizeof(Generator) * NUM_GENERATORS, cudaMemcpyDeviceToHost );
@@ -221,7 +221,7 @@ int main(int argc, char **argv)
 	
 	for(int i = 0; i < TICKS; i++) {
 		// run tick
-		tick(gen_data, gen_data_dev, gen_comp_dev));
+		tick(gen_data, gen_data_dev, gen_comp_dev);
 	}
 	
 	// TODO: print out the best one so far
