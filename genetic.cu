@@ -141,7 +141,7 @@ Generator mutate (Generator * gen_data, idx)
 		
 			child.seed = gen_data[idx].seed;
 			child.values = gen_data[idx].values[i + j * WIDTH; 
-			seed + 0.5 - randPercent() / 50; //some arbitraty value for now 
+			child.seed + 0.5 - randPercent() / 50; //some arbitraty value for now 
 		}
 	}
 }
