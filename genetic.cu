@@ -33,23 +33,23 @@ __device__ void generation(Generator* gen_data, int idx)
 	}
 }
 
-__device__ void fitness(Generator * gen_data) 
+__device__ void fitness(Generator * gen_data, int idx) 
 {
 	// TODO: compare values to pictures of greek letters
 	// is the ratio of white to black correct?
 	// are the positions correct?, if the position is wrong, is there still a high chance for it to be correct?
 	
 	
-	for (inmt i = 0; i < HEIGHT; i++){
+	for (int i = 0; i < HEIGHT; i++){
 	
-		for (int j = 0; k < WIDTH; j++) {
+		for (int j = 0; j < WIDTH; j++) {
 			
 			if (gen_data[idx].values[i + j * WIDTH] == gen_compare[i + j * WIDTH]){
-				gen_data.fitness++;
+				gen_data[idx].fitness++;
 			}
 			
 			else{
-				gen_data.fitness--;
+				gen_data[idx].fitness--;
 			}
 		}
 	
@@ -65,11 +65,11 @@ __global__ void kernel(Generator * gen_data)
 	// TODO: run fitness for the new values
 	
 	
-	int idx = blockIdx.x + threadIdx.x; 
+	int idx = ((blockIdx.x * NUM_THREADS) + threadIdx.x); 
 	
 	generation (gen_data, idx);	
 	
-	fitness(gen_data);
+	fitness(gen_data, idx);
 	
 		
 }
