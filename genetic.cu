@@ -103,7 +103,7 @@ int partition(Generator* gen_data, int p, int r)
 	int pivot = gen_data[r].fitness;
 	int i = p - 1;
 	for(int j = p; j < r - 1; j++) {
-		if(gen_data[j].fitness < pivot) {
+		if(gen_data[j].fitness > pivot) {
 			i++;
 			exchange(gen_data, i, j);
 		}
@@ -125,31 +125,41 @@ void sort(Generator* gen_data, int p, int r)
 void genRandomNumbers(Generator* gen_data, int idx) 
 {
 	// for loop, gen the numbers
+
 	for(int i = 0; i < HEIGHT; i++) {
-		for(int j = 0; i < WIDTH; j++) { 
+		for(int j = 0; j < WIDTH; j++) { 
 			gen_data[idx].rand[i + j * WIDTH] = randPercent();
 		}
 	}
+	
 }
 
 Generator mutate(Generator * gen_data, int idx)
 {
+
+	//Generator child = (Generator) malloc(sizeof(Generator) * NUM_GENERATORS);
 	Generator child;
+	child.seed = (float*) malloc (sizeof(float) *  (WIDTH * HEIGHT));
+	child.values = (bool*) malloc (sizeof(bool) * (WIDTH * HEIGHT));
 	for (int i = 0; i < HEIGHT; i++){
 		for (int j = 0; j < WIDTH; j++){
 			child.seed[i + j * WIDTH] = gen_data[idx].seed[i + j * WIDTH] + (0.5 - randPercent()) / 50;;
 			child.values[i + j * WIDTH] = gen_data[idx].values[i + j * WIDTH]; 
 		}
 	}
+	
 	return child;
 }
 
 void tick(Generator* gen_data, Generator* gen_data_dev, bool* gen_comp_dev)
 {
 	// generate new random numbers
+	
+	
 	for(int i = 0; i < NUM_GENERATORS; i++) {
 		genRandomNumbers(gen_data, i);
 	}
+
 
 	// copy gen_data to gen_data_dev
 	cudaMemcpy( gen_data_dev, gen_data, sizeof(Generator) * NUM_GENERATORS, cudaMemcpyHostToDevice );
@@ -157,6 +167,7 @@ void tick(Generator* gen_data, Generator* gen_data_dev, bool* gen_comp_dev)
 	// TODO: call kernal fuction
 	
 	dim3 grid ((NUM_GENERATORS + NUM_THREADS - 1) / NUM_THREADS);
+
 	
 	kernel<<<grid, NUM_THREADS>>>(gen_data_dev, gen_comp_dev);
 	
@@ -165,10 +176,13 @@ void tick(Generator* gen_data, Generator* gen_data_dev, bool* gen_comp_dev)
 	
 	// sort the gen_data by fitness
 	sort(gen_data, 1, NUM_GENERATORS-1);
-	
+
 	// use the remaining 50% of generators to "breed the next generation"
 	// make a new gen_data
 	Generator* new_gen_data = (Generator*)malloc(sizeof(Generator) * NUM_GENERATORS);
+	
+	//printf("FADS\n");
+	
 	// populate new_gen_data
 	for(int i = 0; i < NUM_GENERATORS/2; i++) {
 		// mutate gen_data[i] and put the child in new_gen_data[i*2 + 0]
@@ -177,22 +191,31 @@ void tick(Generator* gen_data, Generator* gen_data_dev, bool* gen_comp_dev)
 		new_gen_data[i*2 + 1] = mutate(gen_data, i);
 	}
 	
+
 	// exchange new_gen_data <=> gen_data
 	Generator* hold = gen_data;
 	gen_data = new_gen_data;
 	new_gen_data = hold;//gen_data;
-	free(new_gen_data);
+	//free(new_gen_data);
+	
 }
 
-void init_generator(Generator* gen_data, int index)
-{
-	for(int i = 0; i < HEIGHT; i++) {
-		for(int j = 0; j < WIDTH; j++) {
-			gen_data[index].seed[i + j * WIDTH] = randPercent();
-			gen_data[index].values[i + j * WIDTH] = false;
+
+
+void init_generator(Generator* gen_data, int idx){
+
+	for (int i = 0; i < HEIGHT; i++){
+		for (int j = 0; j < WIDTH; j++){
+			
+			//gen_data[idx].seed[i + j * WIDTH] = (float) malloc (sizeof(float) * NUM_GENERATIONS);
+			
+			gen_data[idx].seed[i + j * WIDTH] = randPercent();
+			gen_data[idx].values[i + j * WIDTH] = false;
 		}
 	}
-	gen_data[index].fitness = 0;
+	
+	gen_data[idx].fitness = 0;
+
 }
 
 int main(int argc, char **argv)
@@ -208,16 +231,28 @@ int main(int argc, char **argv)
 	cudaMalloc( &gen_comp_dev, sizeof(bool) * WIDTH*HEIGHT );
 	cudaMemcpy( gen_comp_dev, gen_compare, sizeof(bool) * WIDTH*HEIGHT, cudaMemcpyHostToDevice );
 
-	// init generator* gen_data for the initial random seed
-	Generator* gen_data = (Generator*)malloc(sizeof(Generator) * NUM_GENERATORS);
+	// init generator* gen_data for the initial random seed 
+	//printf("%i\n", sizeof(Generator) NUM_GENERATORS);
+	Generator* gen_data = (Generator*) malloc(sizeof(Generator) * NUM_GENERATORS);
+	
+	//gen_data->seed = (float*) malloc (sizeof(float) *  NUM_GENERATORS);
+	//gen_data->values = (bool*) malloc (sizeof(bool) * NUM_GENERATORS);
+	
 	srand(time(NULL));
+	
 	for(int i = 0; i < NUM_GENERATORS; i++) {
+		gen_data[i].seed = (float*) malloc (sizeof(float) *  (WIDTH * HEIGHT));
+		gen_data[i].values = (bool*) malloc (sizeof(bool) * (WIDTH * HEIGHT));
+		gen_data[i].rand = (float*) malloc (sizeof(float) *  (WIDTH * HEIGHT));
 		init_generator(gen_data, i);
 	}
+	
 	
 	// init gen_data_dev	
 	Generator* gen_data_dev;
 	cudaMalloc(&gen_data_dev, sizeof(Generator) * NUM_GENERATORS);
+	
+	
 	
 	for(int i = 0; i < TICKS; i++) {
 		// run tick
@@ -225,6 +260,12 @@ int main(int argc, char **argv)
 	}
 	
 	// TODO: print out the best one so far
+	
+	for (int i = 0; i < HEIGHT; i++){
+		for (int j = 0; j < WIDTH; j++){
+			printf ("%c", gen_data[0].values[i + j * WIDTH] ? '1' : '0');
+		}
+	}
 
 	return 0;
 }
