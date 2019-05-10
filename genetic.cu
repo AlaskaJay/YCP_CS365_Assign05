@@ -3,11 +3,9 @@
 #include <stdarg.h>
 #include <stdint.h>
 #include <assert.h>
-// #include <pnglite.h>
 #include <math.h>
 #include <sys/time.h>
 #include <stdbool.h>
-#include <curand_kernel.h>
 
 #define NUM_THREADS 128
 #define TICKS 10
@@ -62,19 +60,35 @@ float randPercent()
 	return ((rand() % 1000)/(1000.0));
 }
 
-void sort(Generator* gen_data, int p, int q)
+void exchange(Generator* gen_data, int a, int b) 
 {
-	// IDK use ... uh... quicksort? 
-	// ...
-	// BOGOSORT
+	Generator hold = gen_data[a];
+	gen_data[a] = gen_data[b];
+	gen_data[b] = hold;
 }
 
-void snap(Generator* gen_data)
+int partition(Generator* gen_data, int p, int r) 
 {
-	// sort generators by fitness
-	sort(gen_data, 0, NUM_GENERATORS);
+	int pivot = gen_data[q].fitness;
+	int i = p - 1;
+	for(int j = p; j < r - 1; j++) {
+		if(gen_data[j].fitness < pivot) {
+			i++;
+			exchange(gen_data, i, j);
+		}
+	}
+	exchange(gen_data, i + 1, r);
 	
-	// TODO: kill 50% of them // SNAP
+	return i + 1;
+}
+
+void sort(Generator* gen_data, int p, int r)
+{
+	if(p < r) {
+		int q = partition(gen_data, p, r);
+		sort(gen_data, p, q-1);
+		sort(gen_data, q+1, r);
+	}
 }
 
 void genRandomNumbers(Generator* gen_data, int idx) 
@@ -103,14 +117,23 @@ void tick(Generator* gen_data, Generator* gen_data_dev)
 	// copy gen_data_dev to gen_data
 	cudaMemcpy( gen_data_dev, gen_data, sizeof(Generator) * NUM_GENERATORS, cudaMemcpyDeviceToHost );
 	
-	// SNAP
-	snap(gen_data);
+	// sort the gen_data by fitness
+	sort(gen_data, 1, NUM_GENERATORS-1);
 	
-	// TODO: use the remaining 50% of generators to "breed the next generation"
+	// use the remaining 50% of generators to "breed the next generation"
 	// make a new gen_data
+	Generator* new_gen_data = (Generator*)malloc(sizeof(Generator) * NUM_GENERATORS);
 	// populate new_gen_data
+	for(int i = 0; i < NUM_GENERATORS/2; i++) {
+		// mutate gen_data[i] and put the child in new_gen_data[i*2 + 0]
+		// mutate gen_data[i] and put the child in new_gen_data[i*2 + 1]
+	}
+	
 	// exchange new_gen_data <=> gen_data
-	// free(new_gen_data)
+	Generator* hold = gen_data;
+	gen_data = new_gen_data;
+	new_gen_data = gen_data;
+	free(new_gen_data);
 }
 
 void init_generator(Generator* gen_data, int index)
