@@ -20,9 +20,6 @@ struct Generator {
 	float fitness;  // int?
 };
 
-
-global bool * gen_compare = 0000000000011000001001000100001001111110010000100010010000011000; //letter to compare
-
 __device__ void generation(Generator* gen_data, int idx)
 {
 	// for loop, decides whether or not a space is black
@@ -33,7 +30,7 @@ __device__ void generation(Generator* gen_data, int idx)
 	}
 }
 
-__device__ void fitness(Generator * gen_data, int idx) 
+__device__ void fitness(Generator * gen_data, int idx, bool* gen_comp_dev) 
 {
 	// TODO: compare values to pictures of greek letters
 	// is the ratio of white to black correct?
@@ -44,7 +41,7 @@ __device__ void fitness(Generator * gen_data, int idx)
 	
 		for (int j = 0; j < WIDTH; j++) {
 			
-			if (gen_data[idx].values[i + j * WIDTH] == gen_compare[i + j * WIDTH]){
+			if (gen_data[idx].values[i + j * WIDTH] == gen_comp_dev[i + j * WIDTH]){
 				gen_data[idx].fitness++;
 			}
 			
@@ -59,7 +56,7 @@ __device__ void fitness(Generator * gen_data, int idx)
 	
 }
 
-__global__ void kernel(Generator * gen_data) 
+__global__ void kernel(Generator * gen_data, bool* gen_comp_dev) 
 {
 	// TODO: run generation to make a new values
 	// TODO: run fitness for the new values
@@ -69,7 +66,7 @@ __global__ void kernel(Generator * gen_data)
 	
 	generation (gen_data, idx);	
 	
-	fitness(gen_data, idx);
+	fitness(gen_data, idx, gen_comp_dev);
 	
 		
 }
@@ -100,7 +97,7 @@ void exchange(Generator* gen_data, int a, int b)
 
 int partition(Generator* gen_data, int p, int r) 
 {
-	int pivot = gen_data[q].fitness;
+	int pivot = gen_data[r].fitness;
 	int i = p - 1;
 	for(int j = p; j < r - 1; j++) {
 		if(gen_data[j].fitness < pivot) {
@@ -132,7 +129,7 @@ void genRandomNumbers(Generator* gen_data, int idx)
 	}
 }
 
-void tick(Generator* gen_data, Generator* gen_data_dev)
+void tick(Generator* gen_data, Generator* gen_data_dev, bool* gen_comp_dev)
 {
 	// generate new random numbers
 	for(int i = 0; i < NUM_GENERATORS; i++) {
@@ -140,16 +137,16 @@ void tick(Generator* gen_data, Generator* gen_data_dev)
 	}
 
 	// copy gen_data to gen_data_dev
-	cudaMemcpy( gen_data, gen_data_dev, sizeof(Generator) * NUM_GENERATORS, cudaMemcpyHostToDevice );
+	cudaMemcpy( gen_data_dev, gen_data, sizeof(Generator) * NUM_GENERATORS, cudaMemcpyHostToDevice );
 	
 	// TODO: call kernal fuction
 	
-	dim3 grid ((NUM_GENERATIONS + NUM_THREADS - 1) / NUM_THREADS);
+	dim3 grid ((NUM_GENERATORS + NUM_THREADS - 1) / NUM_THREADS);
 	
-	kernel<<<grid, NUM_THREADS>>(gen_data_dev);
+	kernel<<<grid, NUM_THREADS>>>(gen_data_dev, gen_comp_dev);
 	
 	// copy gen_data_dev to gen_data
-	cudaMemcpy( gen_data_dev, gen_data, sizeof(Generator) * NUM_GENERATORS, cudaMemcpyDeviceToHost );
+	cudaMemcpy( gen_data, gen_data_dev, sizeof(Generator) * NUM_GENERATORS, cudaMemcpyDeviceToHost );
 	
 	// sort the gen_data by fitness
 	sort(gen_data, 1, NUM_GENERATORS-1);
@@ -166,7 +163,7 @@ void tick(Generator* gen_data, Generator* gen_data_dev)
 	// exchange new_gen_data <=> gen_data
 	Generator* hold = gen_data;
 	gen_data = new_gen_data;
-	new_gen_data = gen_data;
+	new_gen_data = hold;
 	free(new_gen_data);
 }
 
@@ -183,6 +180,17 @@ void init_generator(Generator* gen_data, int index)
 
 int main(int argc, char **argv)
 {
+	bool* gen_compare = (bool*)malloc(sizeof(bool) * WIDTH*HEIGHT);	
+	char* hold = (char*)malloc(sizeof(char) * WIDTH*HEIGHT);
+	sscanf("0000000000011000001001000100001001111110010000100010010000011000", "%s", hold);
+	for(int i = 0; i < WIDTH*HEIGHT; i++) {
+		gen_compare[i] = hold[i] == '1';
+	}
+	bool* gen_comp_dev;
+	cudaMalloc( &gen_comp_dev, sizeof(bool) * WIDTH*HEIGHT );
+	cudaMemcpy( gen_comp_dev, gen_compare, sizeof(bool) * WIDTH*HEIGHT, cudaMemcpyHostToDevice );
+	
+	
 	// init generator* gen_data for the initial random seed
 	Generator* gen_data = (Generator*)malloc(sizeof(Generator) * NUM_GENERATORS);
 	srand(time(NULL));
@@ -196,7 +204,7 @@ int main(int argc, char **argv)
 	
 	for(int i = 0; i < TICKS; i++) {
 		// run tick
-		tick(gen_data, gen_data_dev);
+		tick(gen_data, gen_data_dev, gen_comp_dev);
 	}
 	
 	// TODO: print out the best one so far
