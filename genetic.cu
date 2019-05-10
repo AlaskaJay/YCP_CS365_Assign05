@@ -144,7 +144,7 @@ void tick(Generator* gen_data, Generator* gen_data_dev)
 	
 	// TODO: call kernal fuction
 	
-	dim3 grid ((NUM_GENERATIONS + NUM_THREADS - 1) / NUM_THREADS)
+	dim3 grid ((NUM_GENERATIONS + NUM_THREADS - 1) / NUM_THREADS);
 	
 	kernel<<<grid, NUM_THREADS>>(gen_data_dev);
 	
