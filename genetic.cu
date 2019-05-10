@@ -132,18 +132,16 @@ void genRandomNumbers(Generator* gen_data, int idx)
 	}
 }
 
-Generator mutate (Generator * gen_data, idx)
+Generator mutate(Generator * gen_data, idx)
 {
 	Generator child;
 	for (int i = 0; i < HEIGHT; i++){
-	
 		for (int j = 0; j < WIDTH; j++){
-		
-			child.seed = gen_data[idx].seed;
-			child.values = gen_data[idx].values[i + j * WIDTH; 
-			child.seed + 0.5 - randPercent() / 50; //some arbitraty value for now 
+			child.seed[i + j * WIDTH] = gen_data[idx].seed[i + j * WIDTH] + (0.5 - randPercent()) / 50;;
+			child.values[i + j * WIDTH] = gen_data[idx].values[i + j * WIDTH; 
 		}
 	}
+	return child;
 }
 
 void tick(Generator* gen_data, Generator* gen_data_dev)
@@ -174,7 +172,9 @@ void tick(Generator* gen_data, Generator* gen_data_dev)
 	// populate new_gen_data
 	for(int i = 0; i < NUM_GENERATORS/2; i++) {
 		// mutate gen_data[i] and put the child in new_gen_data[i*2 + 0]
+		new_gen_data[i*2 + 0] = mutate(gen_data, i);
 		// mutate gen_data[i] and put the child in new_gen_data[i*2 + 1]
+		new_gen_data[i*2 + 1] = mutate(gen_data, i);
 	}
 	
 	// exchange new_gen_data <=> gen_data
