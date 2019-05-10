@@ -3,10 +3,10 @@
 #include <stdbool.h>
 #include <time.h>
 
-#define TICKS 50
+#define TICKS 5
 #define HEIGHT 8
 #define WIDTH 8
-#define NUM_GENERATORS 100
+#define NUM_GENERATORS 10
 
 typedef struct {
 	float* seed;
@@ -81,7 +81,7 @@ void fitness(GenData* gen_data, bool* gen_compare, int idx) {
 			}
 		}
 	}
-	gen_data->fitness[idx] += (count-18)/64;
+	gen_data->fitness[idx] += (count-18)/64; // THIS IS WRONG
 	// printf("fitness end, %i, %f\n", idx, gen_data->fitness[idx]);
 }
 
@@ -199,7 +199,7 @@ int main(int arc, char **argv) {
 	
 	// ticks
 	for(int i = 0; i < TICKS; i++) {
-		// printf("Tick! %i\n", i);
+		printf("Tick! %i ", i);
 		tick(gen_data, gen_compare);
 	}
 	
