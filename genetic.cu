@@ -19,8 +19,11 @@ struct Generator {
 	float* seed;  // HEIGHT by WIDTH // [0, 1) representing percent chance of the space being black
 	float* rand;  // HEIGHT by WIDTH // [0, 1) representing percent chance used to see if a space is black
 	bool* values; // HEIGHT by WIDTH // bool where true is black, false is white
-	int fitness;  // int?
+	float fitness;  // int?
 };
+
+
+global bool * gen_compare = 0000000000011000001001000100001001111110010000100010010000011000; //letter to compare
 
 __device__ void generation(Generator* gen_data, int idx)
 {
@@ -32,17 +35,45 @@ __device__ void generation(Generator* gen_data, int idx)
 	}
 }
 
-__device__ void fitness() 
+__device__ void fitness(Generator * gen_data) 
 {
 	// TODO: compare values to pictures of greek letters
 	// is the ratio of white to black correct?
 	// are the positions correct?, if the position is wrong, is there still a high chance for it to be correct?
+	
+	
+	for (inmt i = 0; i < HEIGHT; i++){
+	
+		for (int j = 0; k < WIDTH; j++) {
+			
+			if (gen_data[idx].values[i + j * WIDTH] == gen_compare[i + j * WIDTH]){
+				gen_data.fitness++;
+			}
+			
+			else{
+				gen_data.fitness--;
+			}
+		}
+	
+	}
+	
+	
+	
 }
 
-__global__ void kernel() 
+__global__ void kernel(Generator * gen_data) 
 {
 	// TODO: run generation to make a new values
 	// TODO: run fitness for the new values
+	
+	
+	int idx = blockIdx.x + threadIdx.x; 
+	
+	generation (gen_data, idx);	
+	
+	fitness(gen_data);
+	
+		
 }
 
 unsigned long utime(void) 
@@ -99,6 +130,9 @@ void tick(Generator* gen_data, Generator* gen_data_dev)
 	
 	// TODO: call kernal fuction
 	
+	dim3 grid ((NUM_GENERATIONS + NUM_THREADS - 1) / NUM_THREADS)
+	
+	kernel<<<grid, NUM_THREADS>>(gen_data_dev);
 	
 	// copy gen_data_dev to gen_data
 	cudaMemcpy( gen_data_dev, gen_data, sizeof(Generator) * NUM_GENERATORS, cudaMemcpyDeviceToHost );
