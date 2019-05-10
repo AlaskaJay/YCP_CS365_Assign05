@@ -129,7 +129,21 @@ void genRandomNumbers(Generator* gen_data, int idx)
 	}
 }
 
-void tick(Generator* gen_data, Generator* gen_data_dev, bool* gen_comp_dev)
+Generator mutate(Generator * gen_data, idx)
+{
+	Generator child;
+	for (int i = 0; i < HEIGHT; i++){
+	
+		for (int j = 0; j < WIDTH; j++){
+		
+			child.seed = gen_data[idx].seed;
+			child.values = gen_data[idx].values[i + j * WIDTH; 
+			seed + 0.5 - randPercent() / 50; //some arbitraty value for now 
+		}
+	}
+}
+
+void tick(Generator* gen_data, Generator* gen_data_dev)
 {
 	// generate new random numbers
 	for(int i = 0; i < NUM_GENERATORS; i++) {
