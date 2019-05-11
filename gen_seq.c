@@ -3,21 +3,20 @@
 #include <stdbool.h>
 #include <time.h>
 
-#define TICKS 5
+#define TICKS 1000
 #define HEIGHT 8
 #define WIDTH 8
-#define NUM_GENERATORS 10
+#define NUM_GENERATORS 1000
+#define SOFTENING 10
 
 typedef struct {
 	float* seed;
-	bool* image;
 	float* fitness;
 } GenData;
 
 GenData* alloc_gen_data() {
 	GenData* gen_data = (GenData*)malloc(sizeof(GenData));	
 	gen_data->seed = (float*)malloc(sizeof(float) * HEIGHT*WIDTH*NUM_GENERATORS);
-	gen_data->image = (bool*)malloc(sizeof(bool) * HEIGHT*WIDTH*NUM_GENERATORS);
 	gen_data->fitness = (float*)malloc(sizeof(float) * NUM_GENERATORS);
 }
 
@@ -29,7 +28,7 @@ void init_generator(GenData* gen_data, int idx) {
 	for(int i = 0; i < HEIGHT; i++) {
 		for(int j = 0; j < WIDTH; j++) {
 			gen_data->seed[(idx * HEIGHT * WIDTH) + (i * WIDTH) + j] = randPercent();
-			gen_data->image[(idx * HEIGHT * WIDTH) + (i * WIDTH) + j] = false;
+			// gen_data->image[(idx * HEIGHT * WIDTH) + (i * WIDTH) + j] = false;
 		}
 	}
 	gen_data->fitness[idx] = 0;
@@ -44,7 +43,7 @@ bool* init_letter() {
 	}
 	return gen_compare;
 }
-
+/*
 void generation(GenData* gen_data, int idx) {
 	for(int i = 0; i < HEIGHT; i++) {
 		for(int j = 0; j < WIDTH; j++) {
@@ -56,6 +55,7 @@ void generation(GenData* gen_data, int idx) {
 		}
 	}
 }
+*/
 
 void fitness(GenData* gen_data, bool* gen_compare, int idx) {
 	// printf("fitness start\n");
@@ -63,25 +63,15 @@ void fitness(GenData* gen_data, bool* gen_compare, int idx) {
 	float count = 0;
 	for(int i = 0; i < HEIGHT; i++) {
 		for(int j = 0; j < WIDTH; j++) {
+			count += gen_data->seed[(idx * HEIGHT * WIDTH) + (i * WIDTH) + j];
 			if(gen_compare[i * WIDTH + j]) {
-				count++;
-				if(gen_data->image[(idx * HEIGHT * WIDTH) + (i * WIDTH) + j] == gen_compare[i * WIDTH + j]) {
-					gen_data->fitness[idx] += .02;
-				} else {
-					gen_data->fitness[idx] -= .01;
-				}
+				gen_data->fitness[idx] -= 1.0 - gen_data->seed[(idx * HEIGHT * WIDTH) + (i * WIDTH) + j];
 			} else {
-				if(gen_compare[i * WIDTH + j]) {
-					if(gen_data->image[(idx * HEIGHT * WIDTH) + (i * WIDTH) + j] == gen_compare[i * WIDTH + j]) {
-						gen_data->fitness[idx] += .01;
-					} else {
-						gen_data->fitness[idx] -= .005;
-					}
-				}
+				gen_data->fitness[idx] += gen_data->seed[(idx * HEIGHT * WIDTH) + (i * WIDTH) + j];
 			}
 		}
 	}
-	gen_data->fitness[idx] += (count-18)/64; // THIS IS WRONG
+	gen_data->fitness[idx] -= SOFTENING*(count-18)/64; // THIS IS WRONG
 	// printf("fitness end, %i, %f\n", idx, gen_data->fitness[idx]);
 }
 
@@ -105,7 +95,7 @@ void exchange_generators(GenData* gen_data, int a, int b) {
 		for(int j = 0; j < WIDTH; j++) {
 			int ij = i * WIDTH  + j;
 			exchange_float(gen_data->seed, aPrime+ij, bPrime+ij);
-			exchange_bool(gen_data->image, aPrime+ij, bPrime+ij);
+			// exchange_bool(gen_data->image, aPrime+ij, bPrime+ij);
 		}
 	}
 }
@@ -115,7 +105,7 @@ int partition(GenData* gen_data, int p, int r)
 	int pivot = gen_data->fitness[r];
 	int i = p - 1;
 	for(int j = p; j < r - 1; j++) {
-		if(gen_data->fitness[j] > pivot) {
+		if(gen_data->fitness[j] < pivot) {
 			i++;
 			exchange_generators(gen_data, i, j);
 		}
@@ -141,22 +131,18 @@ void mutate(GenData* gen_data, GenData* new_gen_data, int idx) {
 		for(int j = 0; j < WIDTH; j++) {
 			int ij = i * WIDTH  + j;
 			
+			/*
 			// image
 			new_gen_data->image[l + ij] = gen_data->image[o + ij];
 			new_gen_data->image[r + ij] = gen_data->image[o + ij];
+			*/
 			
 			// seed
-			if(new_gen_data->image[l + ij]) {
-				new_gen_data->seed[l + ij] = gen_data->seed[o + ij] - randPercent()/100;
-			} else {
-				new_gen_data->seed[l + ij] = gen_data->seed[o + ij] + randPercent()/100;
-			}
+			new_gen_data->seed[l + ij] = gen_data->seed[o + ij] - randPercent()/SOFTENING;
+			new_gen_data->seed[l + ij] = gen_data->seed[o + ij] + randPercent()/SOFTENING;
 			
-			if(new_gen_data->image[r + ij]) {
-				new_gen_data->seed[r + ij] = gen_data->seed[o + ij] - randPercent()/100;
-			} else {
-				new_gen_data->seed[r + ij] = gen_data->seed[o + ij] + randPercent()/100;
-			}
+			new_gen_data->seed[r + ij] = gen_data->seed[o + ij] - randPercent()/SOFTENING;
+			new_gen_data->seed[r + ij] = gen_data->seed[o + ij] + randPercent()/SOFTENING;
 			/*
 			new_gen_data->seed[l + ij] = gen_data->seed[o + ij] + (0.5 - randPercent()) / 50;
 			new_gen_data->seed[r + ij] = gen_data->seed[o + ij] + (0.5 - randPercent()) / 50;
@@ -168,7 +154,18 @@ void mutate(GenData* gen_data, GenData* new_gen_data, int idx) {
 void next_gen(GenData* gen_data) {
 	// printf("next_gen start\n");
 	// printf("fist fitness of this tick is: %f\n", gen_data->fitness[0]);
+	/*
+	for(int i = 0; i < NUM_GENERATORS; i++) {
+		printf("presort: %i, %f\n", i, gen_data->fitness[i]);
+	}
+	*/
 	sort(gen_data, 0, NUM_GENERATORS-1);
+	/*
+	for(int i = 0; i < NUM_GENERATORS; i++) {
+		printf("postsort: %i, %f\n", i, gen_data->fitness[i]);
+	}
+	*/
+	
 	printf("best fitness of this tick is: %f\n", gen_data->fitness[0]);
 	GenData* new_gen_data = alloc_gen_data();
 	for(int i = 0; i < NUM_GENERATORS/2; i++) {
@@ -180,7 +177,7 @@ void next_gen(GenData* gen_data) {
 
 void tick(GenData* gen_data, bool* gen_compare) {
 	for(int i = 0; i < NUM_GENERATORS; i++) {
-		generation(gen_data, i);
+		// generation(gen_data, i);
 		fitness(gen_data, gen_compare, i);
 	}
 	next_gen(gen_data);
@@ -199,14 +196,14 @@ int main(int arc, char **argv) {
 	
 	// ticks
 	for(int i = 0; i < TICKS; i++) {
-		printf("Tick! %i ", i);
+		printf("Tick! %i \n", i);
 		tick(gen_data, gen_compare);
 	}
 	
 	// print
 	for(int i = 0; i < HEIGHT; i++) {
 		for(int j = 0; j < WIDTH; j++) {
-			if(gen_data->image[i * WIDTH  + j]) {
+			if(gen_data->seed[i * WIDTH  + j] > .5) {
 				printf("1.");
 			} else {
 				printf("0.");
