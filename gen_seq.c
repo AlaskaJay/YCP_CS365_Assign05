@@ -3,7 +3,7 @@
 #include <stdbool.h>
 #include <time.h>
 
-#define TICKS 1000
+#define TICKS 400
 #define HEIGHT 8
 #define WIDTH 8
 #define NUM_GENERATORS 1000
@@ -67,11 +67,11 @@ void fitness(GenData* gen_data, bool* gen_compare, int idx) {
 			if(gen_compare[i * WIDTH + j]) {
 				gen_data->fitness[idx] -= 1.0 - gen_data->seed[(idx * HEIGHT * WIDTH) + (i * WIDTH) + j];
 			} else {
-				gen_data->fitness[idx] += gen_data->seed[(idx * HEIGHT * WIDTH) + (i * WIDTH) + j];
+				gen_data->fitness[idx] -= gen_data->seed[(idx * HEIGHT * WIDTH) + (i * WIDTH) + j] - 1.0;
 			}
 		}
 	}
-	gen_data->fitness[idx] -= SOFTENING*(count-18)/64; // THIS IS WRONG
+	//gen_data->fitness[idx] -= SOFTENING*(count-18)/64; // THIS IS WRONG
 	// printf("fitness end, %i, %f\n", idx, gen_data->fitness[idx]);
 }
 
@@ -126,11 +126,12 @@ void mutate(GenData* gen_data, GenData* new_gen_data, int idx, bool* gen_compare
 	int l = (idx*2 + 0)*HEIGHT*WIDTH;
 	int r = (idx*2 + 1)*HEIGHT*WIDTH;
 	int o = idx*HEIGHT*WIDTH;
+	//printf("pre mutate seed: %f\n", new_gen_data->seed[r]);
 	
 	for(int i = 0; i < HEIGHT; i++) {
 		for(int j = 0; j < WIDTH; j++) {
 			int ij = i * WIDTH  + j;
-			
+		
 			/*
 			// image
 			new_gen_data->image[l + ij] = gen_data->image[o + ij];
@@ -138,6 +139,21 @@ void mutate(GenData* gen_data, GenData* new_gen_data, int idx, bool* gen_compare
 			*/
 			
 			// seed
+			float randAmount = (0.5 - randPercent())/SOFTENING;
+			new_gen_data->seed[l + ij] = (gen_data->seed[o + ij] + randAmount);
+			if(new_gen_data->seed[l + ij] < 0) {
+				new_gen_data->seed[l + ij] = 0.0;
+			} else if (new_gen_data->seed[l + ij] > 1) {
+				new_gen_data->seed[l + ij] = 1.0;
+			}
+			new_gen_data->seed[r + ij] = (gen_data->seed[o + ij] - randAmount);
+			if(new_gen_data->seed[r + ij] < 0) {
+				new_gen_data->seed[r + ij] = 0.0;
+			} else if (new_gen_data->seed[r + ij] > 1) {
+				new_gen_data->seed[r + ij] = 1.0;
+			}
+			
+			/*
 			if(gen_compare[ij]) {
 				new_gen_data->seed[l + ij] = gen_data->seed[o + ij] + .1;
 				new_gen_data->seed[r + ij] = gen_data->seed[o + ij] + .1;
@@ -145,6 +161,7 @@ void mutate(GenData* gen_data, GenData* new_gen_data, int idx, bool* gen_compare
 				new_gen_data->seed[l + ij] = gen_data->seed[o + ij] - .1;
 				new_gen_data->seed[r + ij] = gen_data->seed[o + ij] - .1;
 			}
+			*/
 			
 			/*
 			new_gen_data->seed[l + ij] = gen_data->seed[o + ij] + (0.5 - randPercent()) / 50;
@@ -152,9 +169,12 @@ void mutate(GenData* gen_data, GenData* new_gen_data, int idx, bool* gen_compare
 			*/
 		}
 	}
+	
+		//printf("post mutate seed: %f\n", new_gen_data->seed[r]);
+		
 }
 
-void next_gen(GenData* gen_data, bool* gen_compare) {
+void next_gen(GenData* gen_data, GenData* new_gen_data, bool* gen_compare) {
 	// printf("next_gen start\n");
 	// printf("fist fitness of this tick is: %f\n", gen_data->fitness[0]);
 	/*
@@ -168,22 +188,29 @@ void next_gen(GenData* gen_data, bool* gen_compare) {
 		printf("postsort: %i, %f\n", i, gen_data->fitness[i]);
 	}
 	*/
-	
 	printf("best fitness of this tick is: %f\n", gen_data->fitness[0]);
-	GenData* new_gen_data = alloc_gen_data();
+	//printf("premutate: gen_data: %p, new_gen_data: %p\n", gen_data, new_gen_data);
+	
 	for(int i = 0; i < NUM_GENERATORS/2; i++) {
 		mutate(gen_data, new_gen_data, i, gen_compare);
 	}
-	gen_data = new_gen_data;
-	// printf("next_gen end\n");
+	//printf("preswap: gen_data: %p, new_gen_data: %p\n", gen_data, new_gen_data);
+	
+	
+	
+	
+	
+	//printf("postswap: gen_data: %p, new_gen_data: %p\n", gen_data, new_gen_data);
 }
 
-void tick(GenData* gen_data, bool* gen_compare) {
+void tick(GenData* gen_data, GenData* new_gen_data, bool* gen_compare) {
 	for(int i = 0; i < NUM_GENERATORS; i++) {
 		// generation(gen_data, i);
 		fitness(gen_data, gen_compare, i);
 	}
-	next_gen(gen_data, gen_compare);
+	// printf("pregen_data: %p, new_gen_data: %p\n", gen_data, new_gen_data);
+	next_gen(gen_data, new_gen_data, gen_compare);
+	// printf("postnextgen: gen_data: %p, new_gen_data: %p\n", gen_data, new_gen_data);
 }
 
 int main(int arc, char **argv) {
@@ -198,18 +225,23 @@ int main(int arc, char **argv) {
 	bool* gen_compare = init_letter();
 	
 	// ticks
+	GenData* new_gen_data = alloc_gen_data();
+	printf("gen_data: %p, new_gen_data: %p\n", gen_data, new_gen_data);
 	for(int i = 0; i < TICKS; i++) {
 		printf("Tick! %i \n", i);
-		tick(gen_data, gen_compare);
+		tick(gen_data, new_gen_data, gen_compare);
+		GenData* temp = gen_data;
+		gen_data = new_gen_data;
+		new_gen_data = temp;
 	}
 	
 	// print
 	for(int i = 0; i < HEIGHT; i++) {
 		for(int j = 0; j < WIDTH; j++) {
 			if(gen_data->seed[i * WIDTH  + j] > .5) {
-				printf("1.");
-			} else {
 				printf("0.");
+			} else {
+				printf("1.");
 			}
 		}
 		printf("\n");
