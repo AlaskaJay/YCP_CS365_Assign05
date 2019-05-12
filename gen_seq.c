@@ -122,7 +122,7 @@ void sort(GenData* gen_data, int p, int r) {
 	}
 }
 
-void mutate(GenData* gen_data, GenData* new_gen_data, int idx) {
+void mutate(GenData* gen_data, GenData* new_gen_data, int idx, bool* gen_compare) {
 	int l = (idx*2 + 0)*HEIGHT*WIDTH;
 	int r = (idx*2 + 1)*HEIGHT*WIDTH;
 	int o = idx*HEIGHT*WIDTH;
@@ -138,11 +138,14 @@ void mutate(GenData* gen_data, GenData* new_gen_data, int idx) {
 			*/
 			
 			// seed
-			new_gen_data->seed[l + ij] = gen_data->seed[o + ij] - randPercent()/SOFTENING;
-			new_gen_data->seed[l + ij] = gen_data->seed[o + ij] + randPercent()/SOFTENING;
+			if(gen_compare[ij]) {
+				new_gen_data->seed[l + ij] = gen_data->seed[o + ij] + .1;
+				new_gen_data->seed[r + ij] = gen_data->seed[o + ij] + .1;
+			} else {
+				new_gen_data->seed[l + ij] = gen_data->seed[o + ij] - .1;
+				new_gen_data->seed[r + ij] = gen_data->seed[o + ij] - .1;
+			}
 			
-			new_gen_data->seed[r + ij] = gen_data->seed[o + ij] - randPercent()/SOFTENING;
-			new_gen_data->seed[r + ij] = gen_data->seed[o + ij] + randPercent()/SOFTENING;
 			/*
 			new_gen_data->seed[l + ij] = gen_data->seed[o + ij] + (0.5 - randPercent()) / 50;
 			new_gen_data->seed[r + ij] = gen_data->seed[o + ij] + (0.5 - randPercent()) / 50;
@@ -151,7 +154,7 @@ void mutate(GenData* gen_data, GenData* new_gen_data, int idx) {
 	}
 }
 
-void next_gen(GenData* gen_data) {
+void next_gen(GenData* gen_data, bool* gen_compare) {
 	// printf("next_gen start\n");
 	// printf("fist fitness of this tick is: %f\n", gen_data->fitness[0]);
 	/*
@@ -169,7 +172,7 @@ void next_gen(GenData* gen_data) {
 	printf("best fitness of this tick is: %f\n", gen_data->fitness[0]);
 	GenData* new_gen_data = alloc_gen_data();
 	for(int i = 0; i < NUM_GENERATORS/2; i++) {
-		mutate(gen_data, new_gen_data, i);
+		mutate(gen_data, new_gen_data, i, gen_compare);
 	}
 	gen_data = new_gen_data;
 	// printf("next_gen end\n");
@@ -180,7 +183,7 @@ void tick(GenData* gen_data, bool* gen_compare) {
 		// generation(gen_data, i);
 		fitness(gen_data, gen_compare, i);
 	}
-	next_gen(gen_data);
+	next_gen(gen_data, gen_compare);
 }
 
 int main(int arc, char **argv) {
