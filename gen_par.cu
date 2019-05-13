@@ -8,6 +8,7 @@
 #define WIDTH 8
 #define NUM_GENERATORS 1000
 #define SOFTENING 10
+#define NUM_THREADS 128
 
 typedef struct {
 	float* seed;
@@ -18,6 +19,27 @@ GenData* alloc_gen_data() {
 	GenData* gen_data = (GenData*)malloc(sizeof(GenData));	
 	gen_data->seed = (float*)malloc(sizeof(float) * HEIGHT*WIDTH*NUM_GENERATORS);
 	gen_data->fitness = (float*)malloc(sizeof(float) * NUM_GENERATORS);
+}
+
+__device__ void fitness(GenData* gen_data, bool* gen_compare, int idx) {
+	gen_data->fitness[idx] = 0.0;
+	float count = 0;
+	for(int i = 0; i < HEIGHT; i++) {
+		for(int j = 0; j < WIDTH; j++) {
+			count += gen_data->seed[(idx * HEIGHT * WIDTH) + (i * WIDTH) + j];
+			if(gen_compare[i * WIDTH + j]) {
+				gen_data->fitness[idx] -= 1.0 - gen_data->seed[(idx * HEIGHT * WIDTH) + (i * WIDTH) + j];
+			} else {
+				gen_data->fitness[idx] -= gen_data->seed[(idx * HEIGHT * WIDTH) + (i * WIDTH) + j] - 1.0;
+			}
+		}
+	}
+}
+
+__global__ void kernel(GenData* gen_data, bool* gen_compare){
+	int idx = ((blockIdx.x * NUM_THREADS) + threadIdx.x);
+	
+	fitness(gen_data, gen_compare, idx); 
 }
 
 float randPercent() {
@@ -32,6 +54,10 @@ void init_generator(GenData* gen_data, int idx) {
 		}
 	}
 	gen_data->fitness[idx] = 0;
+	printf("HERE\n");
+	//cudaMalloc(&gen_data->fitness, sizeof(float) * NUM_GENERATORS);
+	//cudaMalloc(&gen_data->seed, sizeof(float) * NUM_GENERATORS); 
+	cudaMalloc(&gen_data, sizeof(GenData) * NUM_GENERATORS);
 }
 
 bool* init_letter() {
@@ -57,7 +83,7 @@ void generation(GenData* gen_data, int idx) {
 }
 */
 
-void fitness(GenData* gen_data, bool* gen_compare, int idx) {
+/*void fitness(GenData* gen_data, bool* gen_compare, int idx) {
 	// printf("fitness start\n");
 	gen_data->fitness[idx] = 0.0;
 	float count = 0;
@@ -73,7 +99,7 @@ void fitness(GenData* gen_data, bool* gen_compare, int idx) {
 	}
 	//gen_data->fitness[idx] -= SOFTENING*(count-18)/64; // THIS IS WRONG
 	// printf("fitness end, %i, %f\n", idx, gen_data->fitness[idx]);
-}
+}*/
 
 void exchange_float(float* arr, int a, int b) {
 	float temp = arr[a];
@@ -204,10 +230,26 @@ void next_gen(GenData* gen_data, GenData* new_gen_data, bool* gen_compare) {
 }
 
 void tick(GenData* gen_data, GenData* new_gen_data, bool* gen_compare) {
-	for(int i = 0; i < NUM_GENERATORS; i++) {
+	/*for(int i = 0; i < NUM_GENERATORS; i++) {
 		// generation(gen_data, i);
 		fitness(gen_data, gen_compare, i);
-	}
+	}*/
+	
+	printf("TEST\n");
+	
+	GenData* gen_data_dev = new GenData;
+	
+	printf("test 1\n");
+	cudaMemcpy(gen_data_dev->fitness, gen_data->fitness, sizeof(float *) * NUM_GENERATORS, cudaMemcpyHostToDevice);
+	cudaMemcpy(gen_data_dev->seed, gen_data->seed, sizeof(float *) * NUM_GENERATORS, cudaMemcpyHostToDevice); 
+	
+	dim3 grid((NUM_GENERATORS + NUM_THREADS - 1) / NUM_THREADS);
+	printf("test 2\n");
+	kernel<<<grid, NUM_THREADS>>>(gen_data, gen_compare);
+	printf("test 3\n");
+	cudaMemcpy(gen_data->fitness, gen_data_dev->fitness, sizeof(float *) * NUM_GENERATORS, cudaMemcpyDeviceToHost);
+	cudaMemcpy(gen_data->seed, gen_data_dev, sizeof(float *) * NUM_GENERATORS, cudaMemcpyDeviceToHost); 
+	printf("test 4\n");
 	// printf("pregen_data: %p, new_gen_data: %p\n", gen_data, new_gen_data);
 	next_gen(gen_data, new_gen_data, gen_compare);
 	// printf("postnextgen: gen_data: %p, new_gen_data: %p\n", gen_data, new_gen_data);
@@ -219,9 +261,11 @@ int main(int arc, char **argv) {
 	
 	// init
 	srand(time(NULL));
+	
 	for(int i = 0; i < NUM_GENERATORS; i++) {
 		init_generator(gen_data, i);
 	}
+	printf("STETSET\n");
 	bool* gen_compare = init_letter();
 	
 	// ticks
