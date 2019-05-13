@@ -143,7 +143,7 @@ Generator mutate(Generator * gen_data, int idx)
 	child.values = (bool*) malloc (sizeof(bool) * (WIDTH * HEIGHT));
 	for (int i = 0; i < HEIGHT; i++){
 		for (int j = 0; j < WIDTH; j++){
-			child.seed[i + j * WIDTH] = gen_data[idx].seed[i + j * WIDTH] + (0.5 - randPercent()) / 50;;
+			child.seed[i + j * WIDTH] = gen_data[idx].seed[i + j * WIDTH] + (0.5 - randPercent()) / 50;
 			child.values[i + j * WIDTH] = gen_data[idx].values[i + j * WIDTH]; 
 		}
 	}
