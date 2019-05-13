@@ -19,6 +19,10 @@ GenData* alloc_gen_data() {
 	GenData* gen_data = (GenData*)malloc(sizeof(GenData));	
 	gen_data->seed = (float*)malloc(sizeof(float) * HEIGHT*WIDTH*NUM_GENERATORS);
 	gen_data->fitness = (float*)malloc(sizeof(float) * NUM_GENERATORS);
+	printf("AA%p\n", gen_data);
+	printf("AA%p\n", gen_data->fitness);
+	printf("AA%p\n", gen_data->seed);
+	return gen_data;
 }
 
 __device__ void fitness(GenData* gen_data, bool* gen_compare, int idx) {
@@ -47,17 +51,17 @@ float randPercent() {
 }
 
 void init_generator(GenData* gen_data, int idx) {
+	printf("I AM IN THE FUNCTION\n");
 	for(int i = 0; i < HEIGHT; i++) {
 		for(int j = 0; j < WIDTH; j++) {
+			printf("%i, %i, %i\n", i, j, idx);
 			gen_data->seed[(idx * HEIGHT * WIDTH) + (i * WIDTH) + j] = randPercent();
 			// gen_data->image[(idx * HEIGHT * WIDTH) + (i * WIDTH) + j] = false;
 		}
 	}
+	printf("I AM OUT OF THE FORLOOP\n");
 	gen_data->fitness[idx] = 0;
-	printf("HERE\n");
-	//cudaMalloc(&gen_data->fitness, sizeof(float) * NUM_GENERATORS);
-	//cudaMalloc(&gen_data->seed, sizeof(float) * NUM_GENERATORS); 
-	cudaMalloc(&gen_data, sizeof(GenData) * NUM_GENERATORS);
+	printf("FASDF\n");
 }
 
 bool* init_letter() {
@@ -229,7 +233,7 @@ void next_gen(GenData* gen_data, GenData* new_gen_data, bool* gen_compare) {
 	//printf("postswap: gen_data: %p, new_gen_data: %p\n", gen_data, new_gen_data);
 }
 
-void tick(GenData* gen_data, GenData* new_gen_data, bool* gen_compare) {
+void tick(GenData* gen_data, GenData* new_gen_data, bool* gen_compare, GenData* gen_data_dev) {
 	/*for(int i = 0; i < NUM_GENERATORS; i++) {
 		// generation(gen_data, i);
 		fitness(gen_data, gen_compare, i);
@@ -237,18 +241,18 @@ void tick(GenData* gen_data, GenData* new_gen_data, bool* gen_compare) {
 	
 	printf("TEST\n");
 	
-	GenData* gen_data_dev = new GenData;
+	
 	
 	printf("test 1\n");
-	cudaMemcpy(gen_data_dev->fitness, gen_data->fitness, sizeof(float *) * NUM_GENERATORS, cudaMemcpyHostToDevice);
-	cudaMemcpy(gen_data_dev->seed, gen_data->seed, sizeof(float *) * NUM_GENERATORS, cudaMemcpyHostToDevice); 
+	cudaMemcpy(gen_data_dev->fitness, gen_data->fitness, sizeof(float ) * NUM_GENERATORS, cudaMemcpyHostToDevice);
+	cudaMemcpy(gen_data_dev->seed, gen_data->seed, sizeof(float) * NUM_GENERATORS, cudaMemcpyHostToDevice); 
 	
 	dim3 grid((NUM_GENERATORS + NUM_THREADS - 1) / NUM_THREADS);
 	printf("test 2\n");
 	kernel<<<grid, NUM_THREADS>>>(gen_data, gen_compare);
 	printf("test 3\n");
-	cudaMemcpy(gen_data->fitness, gen_data_dev->fitness, sizeof(float *) * NUM_GENERATORS, cudaMemcpyDeviceToHost);
-	cudaMemcpy(gen_data->seed, gen_data_dev, sizeof(float *) * NUM_GENERATORS, cudaMemcpyDeviceToHost); 
+	cudaMemcpy(gen_data->fitness, gen_data_dev->fitness, sizeof(float) * NUM_GENERATORS, cudaMemcpyDeviceToHost);
+	cudaMemcpy(gen_data->seed, gen_data_dev, sizeof(float ) * NUM_GENERATORS, cudaMemcpyDeviceToHost); 
 	printf("test 4\n");
 	// printf("pregen_data: %p, new_gen_data: %p\n", gen_data, new_gen_data);
 	next_gen(gen_data, new_gen_data, gen_compare);
@@ -257,10 +261,27 @@ void tick(GenData* gen_data, GenData* new_gen_data, bool* gen_compare) {
 
 int main(int arc, char **argv) {
 	// allocate
+	
+	printf("START \n");
+	
 	GenData* gen_data = alloc_gen_data();
+	//GenData* gen_data = (GenData*)malloc(sizeof(GenData));	
+	//gen_data->seed = (float*)malloc(sizeof(float) * HEIGHT*WIDTH*NUM_GENERATORS);
+	//gen_data->fitness = (float*)malloc(sizeof(float) * NUM_GENERATORS);
+	printf("BB%p\n", gen_data);
+	printf("BB%p\n", gen_data->fitness);
+	printf("BB%p\n", gen_data->seed);
+	
+	GenData* gen_data_dev = (GenData*) malloc (sizeof(GenData));
+	
 	
 	// init
 	srand(time(NULL));
+	printf("GEN DATA \n");
+	cudaMalloc(&gen_data->fitness, sizeof(float) * NUM_GENERATORS);
+	cudaMalloc(&gen_data->seed, sizeof(float) * HEIGHT * WIDTH * NUM_GENERATORS);
+	
+	printf("CUDAMALLOC \n");
 	
 	for(int i = 0; i < NUM_GENERATORS; i++) {
 		init_generator(gen_data, i);
@@ -272,8 +293,8 @@ int main(int arc, char **argv) {
 	GenData* new_gen_data = alloc_gen_data();
 	printf("gen_data: %p, new_gen_data: %p\n", gen_data, new_gen_data);
 	for(int i = 0; i < TICKS; i++) {
-		printf("Tick! %i \n", i);
-		tick(gen_data, new_gen_data, gen_compare);
+		printf("Tick! %i \n", i); 
+		tick(gen_data, new_gen_data, gen_compare, gen_data_dev);
 		GenData* temp = gen_data;
 		gen_data = new_gen_data;
 		new_gen_data = temp;
