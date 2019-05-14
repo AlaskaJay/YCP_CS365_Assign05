@@ -47,6 +47,8 @@ void init_generator(GenData* gen_data, int idx) {
 	gen_data->fitness[idx] = 0;
 }
 
+
+
 bool* init_letter() {
 	bool* gen_compare = (bool*)malloc(sizeof(bool) * WIDTH*HEIGHT);	
 	char* hold = (char*)malloc(sizeof(char) * WIDTH*HEIGHT);
@@ -243,7 +245,11 @@ int main(int arc, char **argv) {
 	unsigned long start = utime();
 	for(int i = 0; i < TICKS; i++) {
 		 // printf("Tick! %i \n", i);
+		unsigned long start = utime();
 		tick(gen_data, new_gen_data, gen_compare);
+		unsigned long end = utime();
+		unsigned long elapsed = end - start;
+		printf("for tick %i the time is %lu\n", i, elapsed);
 		GenData* temp = gen_data;
 		gen_data = new_gen_data;
 		new_gen_data = temp;
