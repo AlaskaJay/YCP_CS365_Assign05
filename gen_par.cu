@@ -4,10 +4,10 @@
 #include <time.h>
 #include <sys/time.h>
 
-#define TICKS 300
-#define HEIGHT 64
-#define WIDTH 64
-#define NUM_GENERATORS 1000
+#define TICKS 10
+#define HEIGHT 512
+#define WIDTH HEIGHT
+#define NUM_GENERATORS 512
 #define SOFTENING 10
 #define NUM_THREADS 128
 
@@ -283,6 +283,7 @@ int main(int arc, char **argv) {
 	
 	
 	// print
+	/*
 	for(int i = 0; i < HEIGHT; i++) {
 		for(int j = 0; j < WIDTH; j++) {
 			if(gen_data->seed[i * WIDTH  + j] > .5) {
@@ -290,12 +291,12 @@ int main(int arc, char **argv) {
 			} else {
 				printf("1.");
 			}
-			// printf(" %f, ", gen_data->seed[i * WIDTH  + j]);
 		}
 		printf("\n");
 	}
+	*/
 	
-	//printf("That gen_par run had %i generators running for %i ticks and took %lu seconds!\n", NUM_GENERATORS, TICKS, elapsed/1000);
+	// printf("That gen_par run had %i generators running for %i ticks and took %lu seconds!\n", NUM_GENERATORS, TICKS, elapsed/1000);
 	
 	// destroy
 	free(gen_data);

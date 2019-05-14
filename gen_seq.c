@@ -4,10 +4,10 @@
 #include <time.h>
 #include <sys/time.h>
 
-#define TICKS 300
-#define HEIGHT 64
-#define WIDTH 64
-#define NUM_GENERATORS 1000
+#define TICKS 10
+#define HEIGHT 512
+#define WIDTH HEIGHT
+#define NUM_GENERATORS 512
 #define SOFTENING 10
 
 typedef struct {
@@ -248,9 +248,9 @@ int main(int arc, char **argv) {
 			}
 		*/
 			if(randPercent() < .5) {
-				gen_compare[i * WIDTH + j] = 1;
+				gen_compare[i * WIDTH + j] = true;
 			} else {
-				gen_compare[i * WIDTH + j] = 0;
+				gen_compare[i * WIDTH + j] = false;
 			}
 			
 		}
@@ -259,7 +259,6 @@ int main(int arc, char **argv) {
 	// ticks
 	GenData* new_gen_data = alloc_gen_data();
 	// printf("gen_data: %p, new_gen_data: %p\n", gen_data, new_gen_data);
-	unsigned long start = utime();
 	for(int i = 0; i < TICKS; i++) {
 		 // printf("Tick! %i \n", i);
 		unsigned long start = utime();
@@ -271,10 +270,9 @@ int main(int arc, char **argv) {
 		gen_data = new_gen_data;
 		new_gen_data = temp;
 	}
-	unsigned long end = utime();
-	unsigned long elapsed = end - start;
 	
 	// print
+	/*
 	for(int i = 0; i < HEIGHT; i++) {
 		for(int j = 0; j < WIDTH; j++) {
 			if(gen_data->seed[i * WIDTH  + j] > .5) {
@@ -285,8 +283,9 @@ int main(int arc, char **argv) {
 		}
 		printf("\n");
 	}
+	*/
 	
-	printf("That gen_seq run had %i generators running for %i ticks and took %lu seconds!\n", NUM_GENERATORS, TICKS, elapsed/1000);
+	// printf("That gen_seq run had %i generators running for %i ticks and took %lu seconds!\n", NUM_GENERATORS, TICKS, elapsed/1000);
 	
 	// destroy
 	free(gen_data);
