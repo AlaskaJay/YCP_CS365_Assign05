@@ -5,8 +5,8 @@
 #include <sys/time.h>
 
 #define TICKS 300
-#define HEIGHT 8
-#define WIDTH 8
+#define HEIGHT 64
+#define WIDTH 64
 #define NUM_GENERATORS 1000
 #define SOFTENING 10
 
@@ -236,6 +236,23 @@ int main(int arc, char **argv) {
 		init_generator(gen_data, i);
 	}
 	bool* gen_compare = init_letter();
+	for(int i = 0; i < HEIGHT; i++) {
+		for(int j = 0; j < WIDTH; j++) {
+		/*
+			if(gen_compare[i * WIDTH + j]) {
+				gen_compare_int[i * WIDTH + j] = 1;
+			} else {
+				gen_compare_int[i * WIDTH + j] = 0;
+			}
+		*/
+			if(randPercent() < .5) {
+				gen_compare[i * WIDTH + j] = 1;
+			} else {
+				gen_compare[i * WIDTH + j] = 0;
+			}
+			
+		}
+	}
 	
 	// ticks
 	GenData* new_gen_data = alloc_gen_data();
