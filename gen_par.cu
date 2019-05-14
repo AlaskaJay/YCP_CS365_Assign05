@@ -268,16 +268,19 @@ int main(int arc, char **argv) {
 	// ticks
 	GenData* new_gen_data = alloc_gen_data();
 	// printf("gen_data: %p, new_gen_data: %p\n", gen_data, new_gen_data);
-	unsigned long start = utime();
+	
 	for(int i = 0; i < TICKS; i++) {
 		// printf("Tick! %i \n", i); 
+		unsigned long start = utime();
 		tick(gen_data, new_gen_data, gen_compare_dev, gen_data_dev);
+		unsigned long end = utime();
+		unsigned long elapsed = end - start;
+		printf("for tick %i the time is %lu\n", i, elapsed);
 		GenData* temp = gen_data;
 		gen_data = new_gen_data;
 		new_gen_data = temp;
 	}
-	unsigned long end = utime();
-	unsigned long elapsed = end - start;
+	
 	
 	// print
 	for(int i = 0; i < HEIGHT; i++) {
@@ -292,7 +295,7 @@ int main(int arc, char **argv) {
 		printf("\n");
 	}
 	
-	printf("That gen_par run had %i generators running for %i ticks and took %lu seconds!\n", NUM_GENERATORS, TICKS, elapsed/1000);
+	//printf("That gen_par run had %i generators running for %i ticks and took %lu seconds!\n", NUM_GENERATORS, TICKS, elapsed/1000);
 	
 	// destroy
 	free(gen_data);
