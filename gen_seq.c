@@ -2,8 +2,9 @@
 #include <stdio.h>
 #include <stdbool.h>
 #include <time.h>
+#include <sys/time.h>
 
-#define TICKS 400
+#define TICKS 300
 #define HEIGHT 8
 #define WIDTH 8
 #define NUM_GENERATORS 1000
@@ -18,6 +19,18 @@ GenData* alloc_gen_data() {
 	GenData* gen_data = (GenData*)malloc(sizeof(GenData));	
 	gen_data->seed = (float*)malloc(sizeof(float) * HEIGHT*WIDTH*NUM_GENERATORS);
 	gen_data->fitness = (float*)malloc(sizeof(float) * NUM_GENERATORS);
+}
+
+unsigned long utime(void) 
+{
+	struct timeval tv;
+	unsigned long result = 0;
+	
+	gettimeofday(&tv, NULL);
+	result += (tv.tv_sec * 1000000);
+	result += tv.tv_usec;
+	
+	return result;
 }
 
 float randPercent() {
@@ -188,7 +201,7 @@ void next_gen(GenData* gen_data, GenData* new_gen_data, bool* gen_compare) {
 		printf("postsort: %i, %f\n", i, gen_data->fitness[i]);
 	}
 	*/
-	printf("best fitness of this tick is: %f\n", gen_data->fitness[0]);
+	// printf("best fitness of this tick is: %f\n", gen_data->fitness[0]);
 	//printf("premutate: gen_data: %p, new_gen_data: %p\n", gen_data, new_gen_data);
 	
 	for(int i = 0; i < NUM_GENERATORS/2; i++) {
@@ -226,14 +239,17 @@ int main(int arc, char **argv) {
 	
 	// ticks
 	GenData* new_gen_data = alloc_gen_data();
-	printf("gen_data: %p, new_gen_data: %p\n", gen_data, new_gen_data);
+	// printf("gen_data: %p, new_gen_data: %p\n", gen_data, new_gen_data);
+	unsigned long start = utime();
 	for(int i = 0; i < TICKS; i++) {
-		printf("Tick! %i \n", i);
+		 // printf("Tick! %i \n", i);
 		tick(gen_data, new_gen_data, gen_compare);
 		GenData* temp = gen_data;
 		gen_data = new_gen_data;
 		new_gen_data = temp;
 	}
+	unsigned long end = utime();
+	unsigned long elapsed = end - start;
 	
 	// print
 	for(int i = 0; i < HEIGHT; i++) {
@@ -246,6 +262,8 @@ int main(int arc, char **argv) {
 		}
 		printf("\n");
 	}
+	
+	printf("That gen_seq run had %i generators running for %i ticks and took %lu seconds!\n", NUM_GENERATORS, TICKS, elapsed/1000);
 	
 	// destroy
 	free(gen_data);

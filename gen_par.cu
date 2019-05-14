@@ -2,8 +2,9 @@
 #include <stdio.h>
 #include <stdbool.h>
 #include <time.h>
+#include <sys/time.h>
 
-#define TICKS 400
+#define TICKS 300
 #define HEIGHT 8
 #define WIDTH 8
 #define NUM_GENERATORS 1000
@@ -17,33 +18,44 @@ typedef struct {
 
 GenData* alloc_gen_data() {
 	GenData* gen_data = (GenData*)malloc(sizeof(GenData));	
-	gen_data->seed = (float*)malloc(sizeof(float) * HEIGHT*WIDTH*NUM_GENERATORS);
+	gen_data->seed = (float*)malloc(sizeof(float) * HEIGHT * WIDTH * NUM_GENERATORS);
 	gen_data->fitness = (float*)malloc(sizeof(float) * NUM_GENERATORS);
-	printf("AA%p\n", gen_data);
-	printf("AA%p\n", gen_data->fitness);
-	printf("AA%p\n", gen_data->seed);
 	return gen_data;
 }
 
-__device__ void fitness(GenData* gen_data, bool* gen_compare, int idx) {
-	gen_data->fitness[idx] = 0.0;
-	float count = 0;
+__device__ void fitness(float* fitness_arr, float* seed, int* gen_compare_dev, int idx) {
+	fitness_arr[idx] = 0.0;
 	for(int i = 0; i < HEIGHT; i++) {
 		for(int j = 0; j < WIDTH; j++) {
-			count += gen_data->seed[(idx * HEIGHT * WIDTH) + (i * WIDTH) + j];
-			if(gen_compare[i * WIDTH + j]) {
-				gen_data->fitness[idx] -= 1.0 - gen_data->seed[(idx * HEIGHT * WIDTH) + (i * WIDTH) + j];
+			if(gen_compare_dev[i * WIDTH + j] == 1) {
+				fitness_arr[idx] -= 1.0 - seed[(idx * HEIGHT * WIDTH) + (i * WIDTH) + j];
+			//	if(idx == 0)
+				//	printf("F");
 			} else {
-				gen_data->fitness[idx] -= gen_data->seed[(idx * HEIGHT * WIDTH) + (i * WIDTH) + j] - 1.0;
+				fitness_arr[idx] -= seed[(idx * HEIGHT * WIDTH) + (i * WIDTH) + j] - 1.0;
+			//	if(idx == 0)
+				//	printf("B");
 			}
 		}
 	}
 }
 
-__global__ void kernel(GenData* gen_data, bool* gen_compare){
+__global__ void kernel(float* fitness_arr, float* seed, int* gen_compare){
 	int idx = ((blockIdx.x * NUM_THREADS) + threadIdx.x);
+	if(idx >= 0 && idx < NUM_GENERATORS)
+		fitness(fitness_arr, seed, gen_compare, idx); 
+}
+
+unsigned long utime(void) 
+{
+	struct timeval tv;
+	unsigned long result = 0;
 	
-	fitness(gen_data, gen_compare, idx); 
+	gettimeofday(&tv, NULL);
+	result += (tv.tv_sec * 1000000);
+	result += tv.tv_usec;
+	
+	return result;
 }
 
 float randPercent() {
@@ -51,17 +63,22 @@ float randPercent() {
 }
 
 void init_generator(GenData* gen_data, int idx) {
-	printf("I AM IN THE FUNCTION\n");
+	// printf("I AM IN THE FUNCTION\n");
+	// printf("CC%p\n", gen_data);
+	// printf("CC%p\n", gen_data->fitness);
+	// printf("CC%p\n", gen_data->seed);
 	for(int i = 0; i < HEIGHT; i++) {
 		for(int j = 0; j < WIDTH; j++) {
-			printf("%i, %i, %i\n", i, j, idx);
+			// printf("%i, %i, %i = %i\n", i, j, idx, (idx * HEIGHT * WIDTH) + (i * WIDTH) + j);
+			
+			// printf("%f\n", *gen_data->seed); // this should (not) fail
 			gen_data->seed[(idx * HEIGHT * WIDTH) + (i * WIDTH) + j] = randPercent();
 			// gen_data->image[(idx * HEIGHT * WIDTH) + (i * WIDTH) + j] = false;
 		}
 	}
-	printf("I AM OUT OF THE FORLOOP\n");
+	// printf("I AM OUT OF THE FORLOOP\n");
 	gen_data->fitness[idx] = 0;
-	printf("FASDF\n");
+	// printf("FASDF\n");
 }
 
 bool* init_letter() {
@@ -73,37 +90,6 @@ bool* init_letter() {
 	}
 	return gen_compare;
 }
-/*
-void generation(GenData* gen_data, int idx) {
-	for(int i = 0; i < HEIGHT; i++) {
-		for(int j = 0; j < WIDTH; j++) {
-			int pos = (idx * HEIGHT * WIDTH) + (i * WIDTH) + j;
-			if(randPercent() < gen_data->seed[pos])
-				gen_data->image[pos] = true;
-			else
-				gen_data->image[pos] = false;
-		}
-	}
-}
-*/
-
-/*void fitness(GenData* gen_data, bool* gen_compare, int idx) {
-	// printf("fitness start\n");
-	gen_data->fitness[idx] = 0.0;
-	float count = 0;
-	for(int i = 0; i < HEIGHT; i++) {
-		for(int j = 0; j < WIDTH; j++) {
-			count += gen_data->seed[(idx * HEIGHT * WIDTH) + (i * WIDTH) + j];
-			if(gen_compare[i * WIDTH + j]) {
-				gen_data->fitness[idx] -= 1.0 - gen_data->seed[(idx * HEIGHT * WIDTH) + (i * WIDTH) + j];
-			} else {
-				gen_data->fitness[idx] -= gen_data->seed[(idx * HEIGHT * WIDTH) + (i * WIDTH) + j] - 1.0;
-			}
-		}
-	}
-	//gen_data->fitness[idx] -= SOFTENING*(count-18)/64; // THIS IS WRONG
-	// printf("fitness end, %i, %f\n", idx, gen_data->fitness[idx]);
-}*/
 
 void exchange_float(float* arr, int a, int b) {
 	float temp = arr[a];
@@ -152,7 +138,7 @@ void sort(GenData* gen_data, int p, int r) {
 	}
 }
 
-void mutate(GenData* gen_data, GenData* new_gen_data, int idx, bool* gen_compare) {
+void mutate(GenData* gen_data, GenData* new_gen_data, int idx) {
 	int l = (idx*2 + 0)*HEIGHT*WIDTH;
 	int r = (idx*2 + 1)*HEIGHT*WIDTH;
 	int o = idx*HEIGHT*WIDTH;
@@ -204,101 +190,85 @@ void mutate(GenData* gen_data, GenData* new_gen_data, int idx, bool* gen_compare
 		
 }
 
-void next_gen(GenData* gen_data, GenData* new_gen_data, bool* gen_compare) {
-	// printf("next_gen start\n");
-	// printf("fist fitness of this tick is: %f\n", gen_data->fitness[0]);
-	/*
-	for(int i = 0; i < NUM_GENERATORS; i++) {
-		printf("presort: %i, %f\n", i, gen_data->fitness[i]);
-	}
-	*/
+void next_gen(GenData* gen_data, GenData* new_gen_data) {
 	sort(gen_data, 0, NUM_GENERATORS-1);
 	/*
 	for(int i = 0; i < NUM_GENERATORS; i++) {
 		printf("postsort: %i, %f\n", i, gen_data->fitness[i]);
 	}
 	*/
-	printf("best fitness of this tick is: %f\n", gen_data->fitness[0]);
-	//printf("premutate: gen_data: %p, new_gen_data: %p\n", gen_data, new_gen_data);
-	
+	// printf("best fitness of this tick is: %f\n", gen_data->fitness[0]);
 	for(int i = 0; i < NUM_GENERATORS/2; i++) {
-		mutate(gen_data, new_gen_data, i, gen_compare);
+		mutate(gen_data, new_gen_data, i);
 	}
-	//printf("preswap: gen_data: %p, new_gen_data: %p\n", gen_data, new_gen_data);
-	
-	
-	
-	
-	
-	//printf("postswap: gen_data: %p, new_gen_data: %p\n", gen_data, new_gen_data);
 }
 
-void tick(GenData* gen_data, GenData* new_gen_data, bool* gen_compare, GenData* gen_data_dev) {
-	/*for(int i = 0; i < NUM_GENERATORS; i++) {
-		// generation(gen_data, i);
-		fitness(gen_data, gen_compare, i);
-	}*/
+void tick(GenData* gen_data, GenData* new_gen_data, int* gen_compare_dev, GenData* gen_data_dev) {
+
+	// COPY IT IN
+	// cudaMemcpy( gen_data_dev->fitness, gen_data->fitness, sizeof(float ) * NUM_GENERATORS, cudaMemcpyHostToDevice );
+	cudaMemcpy( gen_data_dev->seed, gen_data->seed, sizeof(float) * NUM_GENERATORS * HEIGHT * WIDTH, cudaMemcpyHostToDevice) ; 
 	
-	printf("TEST\n");
-	
-	
-	
-	printf("test 1\n");
-	cudaMemcpy(gen_data_dev->fitness, gen_data->fitness, sizeof(float ) * NUM_GENERATORS, cudaMemcpyHostToDevice);
-	cudaMemcpy(gen_data_dev->seed, gen_data->seed, sizeof(float) * NUM_GENERATORS, cudaMemcpyHostToDevice); 
-	
+	// CALL IT
 	dim3 grid((NUM_GENERATORS + NUM_THREADS - 1) / NUM_THREADS);
-	printf("test 2\n");
-	kernel<<<grid, NUM_THREADS>>>(gen_data, gen_compare);
-	printf("test 3\n");
-	cudaMemcpy(gen_data->fitness, gen_data_dev->fitness, sizeof(float) * NUM_GENERATORS, cudaMemcpyDeviceToHost);
-	cudaMemcpy(gen_data->seed, gen_data_dev, sizeof(float ) * NUM_GENERATORS, cudaMemcpyDeviceToHost); 
-	printf("test 4\n");
-	// printf("pregen_data: %p, new_gen_data: %p\n", gen_data, new_gen_data);
-	next_gen(gen_data, new_gen_data, gen_compare);
-	// printf("postnextgen: gen_data: %p, new_gen_data: %p\n", gen_data, new_gen_data);
+	kernel<<<grid, NUM_THREADS>>>(gen_data_dev->fitness, gen_data_dev->seed, gen_compare_dev);
+	
+	// YES
+	cudaMemcpy( gen_data->fitness, gen_data_dev->fitness, sizeof(float) * NUM_GENERATORS, cudaMemcpyDeviceToHost );
+	// cudaMemcpy( gen_data->seed, gen_data_dev->seed, sizeof(float) * NUM_GENERATORS * HEIGHT * WIDTH, cudaMemcpyDeviceToHost ); 
+	
+	next_gen(gen_data, new_gen_data);
 }
 
 int main(int arc, char **argv) {
 	// allocate
 	
-	printf("START \n");
+	// printf("START \n");
 	
-	GenData* gen_data = alloc_gen_data();
-	//GenData* gen_data = (GenData*)malloc(sizeof(GenData));	
-	//gen_data->seed = (float*)malloc(sizeof(float) * HEIGHT*WIDTH*NUM_GENERATORS);
-	//gen_data->fitness = (float*)malloc(sizeof(float) * NUM_GENERATORS);
-	printf("BB%p\n", gen_data);
-	printf("BB%p\n", gen_data->fitness);
-	printf("BB%p\n", gen_data->seed);
-	
-	GenData* gen_data_dev = (GenData*) malloc (sizeof(GenData));
-	
+	GenData* gen_data = alloc_gen_data();	
 	
 	// init
-	srand(time(NULL));
-	printf("GEN DATA \n");
-	cudaMalloc(&gen_data->fitness, sizeof(float) * NUM_GENERATORS);
-	cudaMalloc(&gen_data->seed, sizeof(float) * HEIGHT * WIDTH * NUM_GENERATORS);
+	srand(time(NULL));	
+	GenData* gen_data_dev = (GenData*) malloc (sizeof(GenData));
+	cudaMalloc(&gen_data_dev->fitness, sizeof(float) * NUM_GENERATORS);
+	cudaMalloc(&gen_data_dev->seed, sizeof(float) * HEIGHT * WIDTH * NUM_GENERATORS);
 	
-	printf("CUDAMALLOC \n");
+	// printf("CUDAMALLOC \n");
 	
 	for(int i = 0; i < NUM_GENERATORS; i++) {
 		init_generator(gen_data, i);
 	}
-	printf("STETSET\n");
+	// printf("STETSET\n");
 	bool* gen_compare = init_letter();
+	int* gen_compare_int = (int*)malloc(sizeof(int) * HEIGHT * WIDTH);
+	
+	for(int i = 0; i < HEIGHT; i++) {
+		for(int j = 0; j < WIDTH; j++) {
+			if(gen_compare[i * WIDTH + j]) {
+				gen_compare_int[i * WIDTH + j] = 1;
+			} else {
+				gen_compare_int[i * WIDTH + j] = 0;
+			}
+		}
+	}
+	
+	int* gen_compare_dev;
+	cudaMalloc(&gen_compare_dev, sizeof(int) * HEIGHT * WIDTH);
+	cudaMemcpy(gen_compare_dev, gen_compare_int, sizeof(int) * HEIGHT * WIDTH, cudaMemcpyHostToDevice);
 	
 	// ticks
 	GenData* new_gen_data = alloc_gen_data();
-	printf("gen_data: %p, new_gen_data: %p\n", gen_data, new_gen_data);
+	// printf("gen_data: %p, new_gen_data: %p\n", gen_data, new_gen_data);
+	unsigned long start = utime();
 	for(int i = 0; i < TICKS; i++) {
-		printf("Tick! %i \n", i); 
-		tick(gen_data, new_gen_data, gen_compare, gen_data_dev);
+		// printf("Tick! %i \n", i); 
+		tick(gen_data, new_gen_data, gen_compare_dev, gen_data_dev);
 		GenData* temp = gen_data;
 		gen_data = new_gen_data;
 		new_gen_data = temp;
 	}
+	unsigned long end = utime();
+	unsigned long elapsed = end - start;
 	
 	// print
 	for(int i = 0; i < HEIGHT; i++) {
@@ -308,9 +278,12 @@ int main(int arc, char **argv) {
 			} else {
 				printf("1.");
 			}
+			// printf(" %f, ", gen_data->seed[i * WIDTH  + j]);
 		}
 		printf("\n");
 	}
+	
+	printf("That gen_par run had %i generators running for %i ticks and took %lu seconds!\n", NUM_GENERATORS, TICKS, elapsed/1000);
 	
 	// destroy
 	free(gen_data);
