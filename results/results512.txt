@@ -1,0 +1,23 @@
+seq:
+for tick 0 the time is 14913885
+for tick 1 the time is 32239585
+for tick 2 the time is 31593120
+for tick 3 the time is 26909920
+for tick 4 the time is 30876267
+for tick 5 the time is 27892578
+for tick 6 the time is 26353742
+for tick 7 the time is 26159585
+for tick 8 the time is 22396442
+for tick 9 the time is 27558170
+
+par:
+for tick 0 the time is 14758918
+for tick 1 the time is 25552551
+for tick 2 the time is 24623098
+for tick 3 the time is 17249659
+for tick 4 the time is 23742719
+for tick 5 the time is 36217858
+for tick 6 the time is 22566686
+for tick 7 the time is 19268072
+for tick 8 the time is 21330752
+for tick 9 the time is 19879044
